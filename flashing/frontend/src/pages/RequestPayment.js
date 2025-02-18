@@ -1,69 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-const RequestPayment = () => {
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+function RequestPayment() {
+    const [receiverEmail, setReceiverEmail] = useState("");
+    const [amount, setAmount] = useState("");
+    const [currency, setCurrency] = useState("USD");
 
-    const handlePaymentRequest = async (e) => {
+    const handlePayment = async (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
+        const token = localStorage.getItem("token");
 
-        if (!amount || !description) {
-            setError('Please fill in all fields.');
-            return;
-        }
+        const response = await fetch("http://localhost:5000/send-payment", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ receiver_email: receiverEmail, amount, currency })
+        });
 
-        try {
-            const response = await fetch('/api/request-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ amount, description }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Payment request failed.');
-            }
-
-            const data = await response.json();
-            setSuccess(`Payment request successful: ${data.message}`);
-        } catch (err) {
-            setError(err.message);
+        const data = await response.json();
+        if (response.ok) {
+            alert(`Payment initiated: ${data.transaction_id}`);
+        } else {
+            alert("Payment failed");
         }
     };
 
     return (
         <div>
-            <h1>Request Payment</h1>
-            <form onSubmit={handlePaymentRequest}>
-                <div>
-                    <label>Amount:</label>
-                    <input
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        required
-                    />
-                </div>
-                <div>
-                    <label>Description:</label>
-                    <input
-                        type="text"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
-                    />
-                </div>
-                <button type="submit">Request Payment</button>
+            <h2>Send PayPal Payment</h2>
+            <form onSubmit={handlePayment}>
+                <input type="email" placeholder="Receiver Email" value={receiverEmail} onChange={(e) => setReceiverEmail(e.target.value)} required />
+                <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+                <button type="submit">Send Payment</button>
             </form>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            {success && <p style={{ color: 'green' }}>{success}</p>}
         </div>
     );
-};
+}
 
 export default RequestPayment;

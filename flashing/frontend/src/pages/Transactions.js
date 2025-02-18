@@ -1,46 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
 
-const Transactions = () => {
+function Transactions() {
     const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchTransactions = async () => {
-            try {
-                const response = await axios.get('/api/transactions'); // Adjust the API endpoint as needed
-                setTransactions(response.data);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
+            const token = localStorage.getItem("token");
+            const response = await fetch("http://localhost:5000/transactions", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setTransactions(data);
+            } else {
+                alert("Failed to load transactions");
             }
         };
 
         fetchTransactions();
     }, []);
 
-    if (loading) {
-        return <div>Loading...</div>;
-    }
-
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
-
     return (
         <div>
-            <h1>Transaction History</h1>
+            <h2>Transaction History</h2>
             <ul>
-                {transactions.map(transaction => (
-                    <li key={transaction.id}>
-                        {transaction.description} - ${transaction.amount} on {new Date(transaction.date).toLocaleDateString()}
+                {transactions.map((tx) => (
+                    <li key={tx.id}>
+                        {tx.amount} {tx.currency} to {tx.receiver_email} - Status: {tx.status}
                     </li>
                 ))}
             </ul>
         </div>
     );
-};
+}
 
 export default Transactions;

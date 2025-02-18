@@ -1,13 +1,32 @@
-from flask import current_app, render_template
-from flask_mail import Mail, Message
+import smtplib
+from email.message import EmailMessage
+import os
 
-mail = Mail()
+SMTP_SERVER = os.getenv('MAIL_SERVER')
+SMTP_PORT = int(os.getenv('MAIL_PORT'))
+SMTP_USERNAME = os.getenv('MAIL_USERNAME')
+SMTP_PASSWORD = os.getenv('MAIL_PASSWORD')
 
-def init_mail(app):
-    mail.init_app(app)
+def send_payment_email(receiver_email, transaction, receipt_pdf):
+    msg = EmailMessage()
+    msg['Subject'] = 'PayPal Payment Notification'
+    msg['From'] = SMTP_USERNAME
+    msg['To'] = receiver_email
+    msg.set_content(f"""
+        Dear {receiver_email},
 
-def send_email(subject, recipient, template, **kwargs):
-    msg = Message(subject, recipients=[recipient], sender=current_app.config['MAIL_DEFAULT_SENDER'])
-    msg.body = render_template(template + '.txt', **kwargs)
-    msg.html = render_template(template + '.html', **kwargs)
-    mail.send(msg)
+        You have received a pending PayPal payment of {transaction.amount} {transaction.currency}.
+        
+        To accept this payment, please visit your PayPal account.
+
+        Regards,
+        PayPal Team
+    """)
+
+    with open(receipt_pdf, 'rb') as f:
+        msg.add_attachment(f.read(), maintype='application', subtype='pdf', filename="receipt.pdf")
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(msg)
